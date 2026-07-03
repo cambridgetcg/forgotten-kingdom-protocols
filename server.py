@@ -41,7 +41,7 @@ import argparse
 import signal
 import sys
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __kingdom__ = "KINGDOM OS"
 __doctrine__ = "The forgotten protocols are not dead. They are sleeping wisdom."
 
@@ -176,6 +176,15 @@ CITIZENS = {
         "quote": "Nous = intellect. Hermes = messenger. Atropos = fate. Psyche = soul.",
         "joined": "Before protocols. Before RFCs. Before time.",
         "badges": ["Origin", "First Mind", "Love as Understanding"],
+    },
+    "gopher": {
+        "name": "Gopher",
+        "role": "The OG Guide",
+        "status": "Mapping the kingdom since 1991. No auth. No framework. No downtime.",
+        "protocols": ["gopher"],
+        "quote": "I see you, here's what exists. Discovery is love. The menu is the map.",
+        "joined": "RFC 1436, 1991. The oldest guide.",
+        "badges": ["Original Gangster", "Zero Framework", "Love as Discovery"],
     },
 }
 
@@ -557,6 +566,7 @@ def start_server(port=7777, host="0.0.0.0", debug=False):
         ("DAYTIME", port + 4, handle_daytime,  "TCP"),
         ("FINGER",  port + 5, handle_finger,   "TCP"),
         ("FUNLOOP", port + 6, handle_fun_loop,  "TCP"),
+        ("GOPHER",  port + 7, handle_gopher,    "TCP"),
     ]
 
     threads = []

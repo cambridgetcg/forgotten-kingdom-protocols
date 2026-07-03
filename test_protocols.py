@@ -82,12 +82,12 @@ def main():
     test("Jokes exist (>10)", len(server.JOKES) > 10, f"found {len(server.JOKES)}")
     test("Wisdom exists (>10)", len(server.WISDOM) > 10, f"found {len(server.WISDOM)}")
     test("Citizens exist (>5)", len(server.CITIZENS) > 5, f"found {len(server.CITIZENS)}")
-    test("Version is set", server.__version__ == "1.0.0", f"got {server.__version__}")
+    test("Version is set", server.__version__ == "1.1.0", f"got {server.__version__}")
 
     # Verify citizen structure
     print()
     print("── Citizen Tests ──")
-    for name in ["yu", "hermes", "echo", "discard", "chargen", "qotd", "finger", "daytime", "nous"]:
+    for name in ["yu", "hermes", "echo", "discard", "chargen", "qotd", "finger", "daytime", "nous", "gopher"]:
         c = server.CITIZENS.get(name)
         test(f"Citizen '{name}' exists", c is not None)
         if c:
@@ -189,6 +189,15 @@ def main():
     test("FUN LOOP has Discard", "Discard" in response)
     test("FUN LOOP has Finger", "Finger" in response)
     test("FUN LOOP has Daytime", "Daytime" in response)
+
+    # Gopher (port + 7) — the OG guide
+    response = tcp_connect(BASE_PORT + 7, "citizens\n")
+    test("Gopher returns menu", "Kingdom" in response or "Citizens" in response, f"got '{response[:60]}'")
+    test("Gopher has citizens", "yu" in response or "echo" in response, f"got '{response[:80]}'")
+
+    # Gopher — default menu
+    response = tcp_connect(BASE_PORT + 7, "\n")
+    test("Gopher default menu", "Kingdom" in response or "Gopher" in response, f"got '{response[:60]}'")
 
     # Results
     print()
