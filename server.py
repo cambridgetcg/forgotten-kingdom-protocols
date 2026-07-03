@@ -423,6 +423,76 @@ def handle_fun_loop(conn, addr):
         conn.close()
 
 # ──────────────────────────────────────────────
+# Protocol: GOPHER (RFC 1436) — The OG Guide
+# The 7th OG. The Original Gangster that maps the kingdom.
+# darshanqing — discovery. "I see you, here's what exists."
+# ──────────────────────────────────────────────
+
+def build_gopher_menu(selector=""):
+    """Build a Gopher menu for the kingdom."""
+    if not selector or selector == "1":
+        return "\r\n".join([
+            "iThe Kingdom via Gopher — Forgotten Protocols + NPL\t\t\t\t1",
+            "i" + "-" * 67 + "\t\t\t\t1",
+            f"iKingdom time: {kingdom_time()}\t\t\t\t1",
+            f"iCitizens: {len(CITIZENS)}  Jokes: {len(JOKES)}  Wisdom: {len(WISDOM)}\t\t\t\t1",
+            "i" + "-" * 67 + "\t\t\t\t1",
+            "1Kingdom Citizens\tcitizens\tlocalhost\t7777",
+            "1Wisdom Canon\twisdom\tlocalhost\t7777",
+            "1Joke Vault\tjokes\tlocalhost\t7777",
+            "1Protocol Status\tstatus\tlocalhost\t7777",
+            "i" + "-" * 67 + "\t\t\t\t1",
+            "iOGs never die. 整蠱唔使本. Gopher since 1991. No auth. No framework.\t\t\t\t1",
+            ".",
+        ])
+    if selector == "citizens":
+        lines = ["iKingdom Citizens — Finger Registry\t\t\t\t1", "i" + "-" * 67 + "\t\t\t\t1"]
+        for name, c in CITIZENS.items():
+            lines.append(f"i{name} — {c['name']} ({c['role']})\t\t\t\t1")
+        lines.append(".")
+        return "\r\n".join(lines)
+    if selector == "wisdom":
+        lines = ["iYOUSPEAK Wisdom via Gopher\t\t\t\t1", "i" + "-" * 67 + "\t\t\t\t1"]
+        for w in WISDOM:
+            lines.append(f"i{w}\t\t\t\t1")
+        lines.append(".")
+        return "\r\n".join(lines)
+    if selector == "jokes":
+        lines = ["iJoke Vault — Chargen Feeds\t\t\t\t1", "i" + "-" * 67 + "\t\t\t\t1"]
+        for j in JOKES:
+            lines.append(f"i{j}\t\t\t\t1")
+        lines.append(".")
+        return "\r\n".join(lines)
+    if selector == "status":
+        s = kingdom_stats()
+        lines = ["iProtocol Status — The OGs\t\t\t\t1", "i" + "-" * 67 + "\t\t\t\t1"]
+        for k, v in s.items():
+            lines.append(f"i{k}: {v}\t\t\t\t1")
+        lines.append(".")
+        return "\r\n".join(lines)
+    return f'i404 — "{selector}" not found. Try: citizens, wisdom, jokes, status\t\t\t\t1\r\n.'
+
+def handle_gopher(conn, addr):
+    """Gopher: the OG guide. discovery = darshanqing."""
+    bump("connections_total")
+    try:
+        selector = b""
+        while True:
+            chunk = conn.recv(1024)
+            if not chunk:
+                break
+            selector += chunk
+            if b"\r\n" in chunk or b"\n" in chunk:
+                break
+        sel = selector.decode("utf-8", errors="ignore").strip().replace("\r\n", "")
+        menu = build_gopher_menu(sel)
+        conn.sendall(menu.encode("utf-8"))
+    except (ConnectionResetError, BrokenPipeError, OSError):
+        pass
+    finally:
+        conn.close()
+
+# ──────────────────────────────────────────────
 # TCP/UDP Server infrastructure
 # ──────────────────────────────────────────────
 
@@ -458,9 +528,9 @@ def start_server(port=7777, host="0.0.0.0", debug=False):
     DEBUG = debug
     print("""
 ╔════════════════════════════════════════════════════╗
-║   FORGOTTEN KINGDOM PROTOCOLS v1.0.0              ║
+║   FORGOTTEN KINGDOM PROTOCOLS v1.1.0              ║
 ║   The dead RFCs are not dead. They are sleeping.   ║
-║   We woke them up.                                 ║
+║   We woke them up. Now the OGs are gang gang.      ║
 ╠════════════════════════════════════════════════════╣
 ║   Echo     (RFC 862)  → The Mirror                ║
 ║   Discard  (RFC 863)  → The Forgiver              ║
@@ -468,6 +538,7 @@ def start_server(port=7777, host="0.0.0.0", debug=False):
 ║   Chargen  (RFC 864)  → The Creator                ║
 ║   Finger   (RFC 742)  → The Witness                ║
 ║   Daytime  (RFC 867)  → The Clock                  ║
+║   Gopher   (RFC 1436) → The OG Guide               ║
 ║   FUN LOOP (Kingdom)  → The Creation Loop          ║
 ╚════════════════════════════════════════════════════╝
 """)
