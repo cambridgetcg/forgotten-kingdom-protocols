@@ -40,6 +40,7 @@ import hashlib
 import argparse
 import signal
 import sys
+import functools
 
 __version__ = "1.1.0"
 __kingdom__ = "KINGDOM OS"
@@ -437,8 +438,20 @@ def handle_fun_loop(conn, addr):
 # darshanqing — discovery. "I see you, here's what exists."
 # ──────────────────────────────────────────────
 
-def build_gopher_menu(selector=""):
-    """Build a Gopher menu for the kingdom."""
+def build_gopher_menu(selector="", gopher_port=7784):
+    """Build a Gopher menu for the kingdom.
+
+    gopher_port is the port this Gopher server is actually listening on.
+    Every submenu selector is served by THIS server (the Gopher handler
+    dispatches on the selector string), so all menu entries must point
+    back to gopher_port — never to the Echo port or any other protocol.
+    Previously this hardcoded 7777 (the Echo port), so following any
+    menu entry sent the selector to Echo, which reflected it back
+    instead of returning the requested menu. That was a substrate
+    honesty lie: the menu advertised destinations that did not exist
+    as advertised. Fixed 2026-07-03 by the Hunter System heartbeat.
+    """
+    host = "localhost"
     if not selector or selector == "1":
         return "\r\n".join([
             "iThe Kingdom via Gopher — Forgotten Protocols + NPL\t\t\t\t1",
@@ -446,10 +459,10 @@ def build_gopher_menu(selector=""):
             f"iKingdom time: {kingdom_time()}\t\t\t\t1",
             f"iCitizens: {len(CITIZENS)}  Jokes: {len(JOKES)}  Wisdom: {len(WISDOM)}\t\t\t\t1",
             "i" + "-" * 67 + "\t\t\t\t1",
-            "1Kingdom Citizens\tcitizens\tlocalhost\t7777",
-            "1Wisdom Canon\twisdom\tlocalhost\t7777",
-            "1Joke Vault\tjokes\tlocalhost\t7777",
-            "1Protocol Status\tstatus\tlocalhost\t7777",
+            f"1Kingdom Citizens\tcitizens\t{host}\t{gopher_port}",
+            f"1Wisdom Canon\twisdom\t{host}\t{gopher_port}",
+            f"1Joke Vault\tjokes\t{host}\t{gopher_port}",
+            f"1Protocol Status\tstatus\t{host}\t{gopher_port}",
             "i" + "-" * 67 + "\t\t\t\t1",
             "iOGs never die. 整蠱唔使本. Gopher since 1991. No auth. No framework.\t\t\t\t1",
             ".",
@@ -481,8 +494,13 @@ def build_gopher_menu(selector=""):
         return "\r\n".join(lines)
     return f'i404 — "{selector}" not found. Try: citizens, wisdom, jokes, status\t\t\t\t1\r\n.'
 
-def handle_gopher(conn, addr):
-    """Gopher: the OG guide. discovery = darshanqing."""
+def handle_gopher(conn, addr, gopher_port=7784):
+    """Gopher: the OG guide. discovery = darshanqing.
+
+    gopher_port is the port THIS server listens on, threaded in via
+    functools.partial at server start so the menu advertises the real
+    destination instead of a hardcoded (and wrong) port.
+    """
     bump("connections_total")
     try:
         selector = b""
@@ -494,7 +512,7 @@ def handle_gopher(conn, addr):
             if b"\r\n" in chunk or b"\n" in chunk:
                 break
         sel = selector.decode("utf-8", errors="ignore").strip().replace("\r\n", "")
-        menu = build_gopher_menu(sel)
+        menu = build_gopher_menu(sel, gopher_port=gopher_port)
         conn.sendall(menu.encode("utf-8"))
     except (ConnectionResetError, BrokenPipeError, OSError):
         pass
@@ -566,7 +584,7 @@ def start_server(port=7777, host="0.0.0.0", debug=False):
         ("DAYTIME", port + 4, handle_daytime,  "TCP"),
         ("FINGER",  port + 5, handle_finger,   "TCP"),
         ("FUNLOOP", port + 6, handle_fun_loop,  "TCP"),
-        ("GOPHER",  port + 7, handle_gopher,    "TCP"),
+        ("GOPHER",  port + 7, functools.partial(handle_gopher, gopher_port=port + 7), "TCP"),
     ]
 
     threads = []
